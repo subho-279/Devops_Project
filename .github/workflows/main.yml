@@ -46,12 +46,11 @@ jobs:
         run: |
           echo "${{ secrets.SEALED_CERT }}" | base64 --decode > mycert.pem
 
-      - name: Install kubeseal
+     - name: Install kubeseal
         run: |
-          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.6/kubeseal-0.24.6-linux-amd64.tar.gz
-          tar -xzf kubeseal-0.24.6-linux-amd64.tar.gz
-          chmod +x kubeseal
-          sudo mv kubeseal /usr/local/bin/kubeseal
+          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.6/kubeseal-linux-amd64
+          chmod +x kubeseal-linux-amd64
+          sudo mv kubeseal-linux-amd64 /usr/local/bin/kubeseal
 
       - name: Generate sealed secret from GitHub secret
         run: |
