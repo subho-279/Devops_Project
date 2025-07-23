@@ -50,7 +50,8 @@ jobs:
         run: |
           wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.6/kubeseal-0.24.6-linux-amd64.tar.gz
           tar -xzf kubeseal-0.24.6-linux-amd64.tar.gz
-          sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+          chmod +x kubeseal
+          sudo mv kubeseal /usr/local/bin/kubeseal
 
       - name: Generate sealed secret from GitHub secret
         run: |
