@@ -18,57 +18,57 @@ jobs:
       - name: Trivy - Docker Security Scan
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: 'fs'
+          scan-type: fs
           ignore-unfixed: true
-          format: 'table'
-          exit-code: '0'
-          severity: 'CRITICAL,HIGH'
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
 
- deploy:
-  name: Apply Sealed Secrets + Deploy to K8s
-  needs: security-scans
-  runs-on: ubuntu-latest
-  steps:
-    - name: Checkout source
-      uses: actions/checkout@v3
+  deploy:
+    name: Apply Sealed Secrets + Deploy to K8s
+    needs: security-scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
 
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'v1.28.0'
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: v1.28.0
 
-    - name: Set up Kubeconfig
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBECONFIG_B64 }}" | base64 --decode > $HOME/.kube/config
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 --decode > $HOME/.kube/config
 
-    - name: Restore sealed cert
-      run: |
-        echo "${{ secrets.SEALED_CERT }}" | base64 --decode > mycert.pem
+      - name: Restore sealed cert
+        run: |
+          echo "${{ secrets.SEALED_CERT }}" | base64 --decode > mycert.pem
 
-    - name: Install kubeseal
-      run: |
-        wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.6/kubeseal-0.24.6-linux-amd64.tar.gz
-        tar -xvzf kubeseal-0.24.6-linux-amd64.tar.gz
-        sudo install -m 755 kubeseal /usr/local/bin/kubeseal
+      - name: Install kubeseal
+        run: |
+          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.6/kubeseal-0.24.6-linux-amd64.tar.gz
+          tar -xzf kubeseal-0.24.6-linux-amd64.tar.gz
+          sudo install -m 755 kubeseal /usr/local/bin/kubeseal
 
-    - name: Generate sealed secret from GitHub secret
-      run: |
-        echo "
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: mysecret
-          namespace: default
-        type: Opaque
-        stringData:
-          password: '${{ secrets.SECRET_PASSWORD }}'
-        " > secret.yaml
+      - name: Generate sealed secret from GitHub secret
+        run: |
+          echo "
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: mysecret
+            namespace: default
+          type: Opaque
+          stringData:
+            password: '${{ secrets.SECRET_PASSWORD }}'
+          " > secret.yaml
 
-        kubeseal --cert mycert.pem --format yaml < secret.yaml > sealed-secrets/sealedsecret.yaml
+          kubeseal --cert mycert.pem --format yaml < secret.yaml > sealed-secrets/sealedsecret.yaml
 
-    - name: Apply sealed secret
-      run: kubectl apply -f sealed-secrets/sealedsecret.yaml
+      - name: Apply sealed secret
+        run: kubectl apply -f sealed-secrets/sealedsecret.yaml
 
-    - name: Apply application deployment
-      run: kubectl apply -f k8s/deployment.yaml
+      - name: Apply application deployment
+        run: kubectl apply -f k8s/deployment.yaml
