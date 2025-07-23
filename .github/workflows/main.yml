@@ -3,6 +3,7 @@ name: DevSecOps CI/CD Pipeline
 on:
   push:
     branches: [main]
+  workflow_dispatch:  # Allows manual triggering
 
 jobs:
   security-scans:
@@ -45,11 +46,9 @@ jobs:
           mkdir -p $HOME/.minikube/profiles/minikube
           echo "${{ secrets.MINIKUBE_CLIENT_CRT }}" | base64 --decode > $HOME/.minikube/profiles/minikube/client.crt
           echo "${{ secrets.MINIKUBE_CLIENT_KEY }}" | base64 --decode > $HOME/.minikube/profiles/minikube/client.key
-          
+
           mkdir -p $HOME/.minikube
           echo "${{ secrets.MINIKUBE_CA_CRT }}" | base64 --decode > $HOME/.minikube/ca.crt
-
-
 
       - name: Restore sealed cert
         run: |
@@ -57,8 +56,8 @@ jobs:
 
       - name: Install kubeseal
         run: |
-          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.23.0/kubeseal-0.23.0-linux-amd64.tar.gz
-          tar -xzf kubeseal-0.23.0-linux-amd64.tar.gz
+          wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.25.0/kubeseal-0.25.0-linux-amd64.tar.gz
+          tar -xzf kubeseal-0.25.0-linux-amd64.tar.gz
           sudo install kubeseal /usr/local/bin/kubeseal
 
       - name: Generate sealed secret from GitHub secret
@@ -73,7 +72,7 @@ jobs:
           stringData:
             password: '${{ secrets.SECRET_PASSWORD }}'
           " > secret.yaml
-          
+
           mkdir -p sealed-secrets
           kubeseal --cert mycert.pem --format yaml < secret.yaml > sealed-secrets/sealedsecret.yaml
 
