@@ -46,7 +46,7 @@ jobs:
         run: |
           echo "${{ secrets.SEALED_CERT }}" | base64 --decode > mycert.pem
 
-     - name: Install kubeseal
+      - name: Install kubeseal
         run: |
           wget https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.6/kubeseal-linux-amd64
           chmod +x kubeseal-linux-amd64
@@ -64,7 +64,6 @@ jobs:
           stringData:
             password: '${{ secrets.SECRET_PASSWORD }}'
           " > secret.yaml
-
           kubeseal --cert mycert.pem --format yaml < secret.yaml > sealed-secrets/sealedsecret.yaml
 
       - name: Apply sealed secret
