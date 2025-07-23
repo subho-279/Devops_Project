@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "🔑 Writing PEM key to devops_key.pem"
+      - echo "$EC2_SSH_KEY" | base64 -d > devops_key.pem
+      - chmod 400 devops_key.pem
+
+  pre_build:
+    commands:
+      - echo "📡 Pinging EC2 instance..."
+      - ssh -i devops_key.pem -o StrictHostKeyChecking=no ec2-user@3.86.200.44 "echo '✅ Connected to EC2'"
+
+  build:
+    commands:
+      - echo "🚀 Deploying to EC2..."
+      - scp -i devops_key.pem -o StrictHostKeyChecking=no -r ./your_app_folder ec2-user@3.86.200.44:/home/ec2-user/
+      - ssh -i devops_key.pem -o StrictHostKeyChecking=no ec2-user@3.86.200.44 "cd /home/ec2-user/your_app_folder && ./deploy.sh"
+
+artifacts:
+  files: []
