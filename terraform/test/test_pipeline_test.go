@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-// cleaned placeholder
-=======
 package test
 
 import (
@@ -34,4 +31,3 @@ func TestTerraformCodePipeline(t *testing.T) {
 	terraform.InitAndApply(t, terraformOptions)
 	defer terraform.Destroy(t, terraformOptions)
 }
->>>>>>> ac779e9 (Triggering pipeline test)

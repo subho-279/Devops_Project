@@ -1,7 +1,13 @@
 provider "aws" {
   region = var.region
 }
-
+resource "aws_s3_bucket_public_access_block" "artifact_block" {
+  bucket                  = aws_s3_bucket.artifact_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
 # Artifact S3 bucket
 resource "aws_s3_bucket" "artifact_bucket" {
   bucket = var.artifact_bucket_name
@@ -70,9 +76,9 @@ resource "aws_iam_role" "codebuild_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "codebuild.amazonaws.com" },
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -87,9 +93,9 @@ resource "aws_iam_role" "codepipeline_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [{
-      Effect = "Allow",
+      Effect    = "Allow",
       Principal = { Service = "codepipeline.amazonaws.com" },
-      Action = "sts:AssumeRole"
+      Action    = "sts:AssumeRole"
     }]
   })
 }
@@ -111,58 +117,58 @@ resource "aws_codebuild_project" "devops_build" {
   }
 
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "aws/codebuild/standard:6.0"
-    type                        = "LINUX_CONTAINER"
-    privileged_mode             = true
+    compute_type    = "BUILD_GENERAL1_SMALL"
+    image           = "aws/codebuild/standard:6.0"
+    type            = "LINUX_CONTAINER"
+    privileged_mode = true
   }
 
   source {
-    type     = "CODEPIPELINE"
+    type      = "CODEPIPELINE"
     buildspec = file("buildspec.yml")
   }
 }
 
 resource "aws_codebuild_project" "deploy_project" {
-  name          = "DeployToEC2"
-  service_role  = aws_iam_role.codebuild_role.arn
+  name         = "DeployToEC2"
+  service_role = aws_iam_role.codebuild_role.arn
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-  compute_type                = "BUILD_GENERAL1_SMALL"
-  image                       = "aws/codebuild/standard:7.0"
-  type                        = "LINUX_CONTAINER"
-  privileged_mode             = true
+    compute_type    = "BUILD_GENERAL1_SMALL"
+    image           = "aws/codebuild/standard:7.0"
+    type            = "LINUX_CONTAINER"
+    privileged_mode = true
 
-  environment_variable {
-    name  = "EC2_IP"
-    value = "3.86.200.44"
-  }
+    environment_variable {
+      name  = "EC2_IP"
+      value = "3.86.200.44"
+    }
 
-  environment_variable {
-    name  = "EC2_SSH_USER"
-    value = "ec2-user"
-  }
+    environment_variable {
+      name  = "EC2_SSH_USER"
+      value = "ec2-user"
+    }
 
-  environment_variable {
-    name  = "EC2_SSH_KEY"
-    value = var.ec2_ssh_key
-    type  = "PLAINTEXT"
-  }
+    environment_variable {
+      name  = "EC2_SSH_KEY"
+      value = var.ec2_ssh_key
+      type  = "PLAINTEXT"
+    }
 
-  environment_variable {
-    name  = "GITHUB_TOKEN"
-    value = var.github_token
-  }
+    environment_variable {
+      name  = "GITHUB_TOKEN"
+      value = var.github_token
+    }
 
-  environment_variable {
-    name  = "REGION"
-    value = var.region
+    environment_variable {
+      name  = "REGION"
+      value = var.region
+    }
   }
-}
 
   source {
     type      = "CODEPIPELINE"
@@ -217,18 +223,18 @@ resource "aws_codepipeline" "pipeline" {
   }
 
   stage {
-  name = "Deploy"
+    name = "Deploy"
 
-  action {
-    name             = "DeployToEC2"
-    category         = "Build"
-    owner            = "AWS"
-    provider         = "CodeBuild"
-    input_artifacts  = ["build_output"]
-    version          = "1"
-    configuration = {
-      ProjectName = aws_codebuild_project.deploy_project.name
+    action {
+      name            = "DeployToEC2"
+      category        = "Build"
+      owner           = "AWS"
+      provider        = "CodeBuild"
+      input_artifacts = ["build_output"]
+      version         = "1"
+      configuration = {
+        ProjectName = aws_codebuild_project.deploy_project.name
+      }
     }
   }
-}
 }
