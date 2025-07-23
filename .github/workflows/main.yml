@@ -49,6 +49,8 @@ jobs:
           mkdir -p $HOME/.minikube
           echo "${{ secrets.MINIKUBE_CA_CRT }}" | base64 --decode > $HOME/.minikube/ca.crt
 
+
+
       - name: Restore sealed cert
         run: |
           echo "${{ secrets.SEALED_CERT }}" | base64 --decode > mycert.pem
