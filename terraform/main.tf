@@ -16,7 +16,12 @@ resource "aws_s3_bucket" "artifact_bucket" {
 # Logging S3 bucket
 resource "aws_s3_bucket" "logging_bucket" {
   bucket = var.logging_bucket_name
+  logging {
+    target_bucket = var.logging_target_bucket
+    target_prefix = var.logging_target_prefix
+  }
 }
+
 
 # Server-side encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "artifact_encryption" {
