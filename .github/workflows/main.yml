@@ -1,12 +1,3 @@
-Let's make sure your updated `main.yml` is **correctly structured and syntactically valid**.
-
----
-
-### ✅ Corrected `main.yml` (with proper YAML structure):
-
-Here's a clean, fixed version of your workflow, especially focusing on **line 27** (most likely where `echo` was incorrectly placed):
-
-```yaml
 name: DevSecOps CI/CD Pipeline
 
 on:
