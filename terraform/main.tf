@@ -2,9 +2,59 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Artifact storage bucket
+# Artifact storage bucket (secured)
 resource "aws_s3_bucket" "artifact_bucket" {
   bucket = var.artifact_bucket_name
+
+  versioning {
+    enabled = true
+  }
+
+  tags = {
+    Name        = "artifact-bucket"
+    Environment = "dev"
+  }
+}
+
+# Encryption for the artifact bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
+  bucket = aws_s3_bucket.artifact_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# Block all forms of public access
+resource "aws_s3_bucket_public_access_block" "artifact_bucket_block" {
+  bucket                  = aws_s3_bucket.artifact_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Logging configuration
+resource "aws_s3_bucket_logging" "artifact_bucket_logging" {
+  bucket        = aws_s3_bucket.artifact_bucket.id
+  target_bucket = var.logging_bucket_name
+  target_prefix = "artifact-logs/"
+}
+
+# Logging bucket
+resource "aws_s3_bucket" "logging_bucket" {
+  bucket = var.logging_bucket_name
+
+  versioning {
+    enabled = true
+  }
+
+  tags = {
+    Name        = "log-bucket"
+    Environment = "dev"
+  }
 }
 
 # CodePipeline IAM Role
@@ -59,10 +109,10 @@ resource "aws_codebuild_project" "devops_build" {
   }
 
   environment {
-    compute_type                = "BUILD_GENERAL1_SMALL"
-    image                       = "aws/codebuild/standard:6.0"
-    type                        = "LINUX_CONTAINER"
-    privileged_mode             = true
+    compute_type    = "BUILD_GENERAL1_SMALL"
+    image           = "aws/codebuild/standard:6.0"
+    type            = "LINUX_CONTAINER"
+    privileged_mode = true
   }
 
   source {
@@ -114,5 +164,4 @@ resource "aws_codepipeline" "devops_pipeline" {
       }
     }
   }
-
 }

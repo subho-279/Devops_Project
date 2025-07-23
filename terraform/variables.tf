@@ -1,25 +1,34 @@
 variable "aws_region" {
-  default = "us-east-1"
+  description = "AWS region to deploy resources in"
+  default     = "us-east-1"
 }
 
 variable "artifact_bucket_name" {
-  default = "devops-masters-artifacts-subho"
+  description = "Name of the S3 bucket used by CodePipeline"
+  default     = "devops-masters-artifacts-subho"
+}
+
+variable "logging_bucket_name" {
+  description = "Name of the S3 bucket to store logs"
+  default     = "devops-masters-logs-subho"
 }
 
 variable "github_owner" {
-  default = "subho-279"
+  description = "GitHub repository owner"
+  default     = "subho-279"
 }
 
 variable "github_repo" {
-  default = "Devops_Project"
+  description = "GitHub repository name"
+  default     = "Devops_Project"
 }
 
 variable "github_branch" {
-  default = "main"
+  description = "Branch to use in GitHub repo"
+  default     = "main"
 }
 
 variable "github_token" {
-  description = "GitHub personal access token"
+  description = "GitHub token for CodePipeline (set in Terraform Cloud or TF_VAR)"
   type        = string
-  sensitive   = true
 }
