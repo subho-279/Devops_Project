@@ -1,9 +1,30 @@
 version: 0.2
 
 phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo "Installing dependencies..."
+      - pip install --upgrade pip
+      - pip install -r requirements.txt || true  # fallback if no requirements
+
+  pre_build:
+    commands:
+      - echo "Pre-build phase started"
+      - echo "Linting or scanning tools can be added here"
+
   build:
     commands:
-      - echo "✅ Building Devops_Project"
+      - echo "Build phase started"
+      - echo "This is where you build or test your app"
+      - ls -alh
+
+  post_build:
+    commands:
+      - echo "Post-build started"
+      - echo "Artifacts will be uploaded if configured"
+
 artifacts:
   files:
     - '**/*'
