@@ -1,0 +1,42 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Writing SSH key from SSM (injected as env var)..."
+      # EC2_SSH_KEY is base64-encoded and injected from SSM Parameter Store
+      - echo "$EC2_SSH_KEY" | base64 -d > /tmp/devops_key.pem
+      - chmod 400 /tmp/devops_key.pem
+
+  pre_build:
+    commands:
+      - echo "Verifying SSH connectivity to EC2..."
+      - ssh -i /tmp/devops_key.pem
+          -o StrictHostKeyChecking=no
+          -o ConnectTimeout=10
+          ${EC2_SSH_USER}@${EC2_IP}
+          "echo '✅ SSH connection successful'"
+
+  build:
+    commands:
+      - echo "Copying application files to EC2..."
+      # FIX: replaced placeholder 'your_app_folder' with '.' (copy the whole artifact)
+      - scp -i /tmp/devops_key.pem
+          -o StrictHostKeyChecking=no
+          -r .
+          ${EC2_SSH_USER}@${EC2_IP}:/home/${EC2_SSH_USER}/app/
+
+      - echo "Running deploy script on EC2..."
+      - ssh -i /tmp/devops_key.pem
+          -o StrictHostKeyChecking=no
+          ${EC2_SSH_USER}@${EC2_IP}
+          "cd /home/${EC2_SSH_USER}/app && bash deploy.sh"
+
+  post_build:
+    commands:
+      # FIX: clean up key from the build container after use
+      - rm -f /tmp/devops_key.pem
+      - echo "Deploy phase complete."
+
+artifacts:
+  files: []

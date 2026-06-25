@@ -1,0 +1,99 @@
+name: DevSecOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  security-scans:
+    name: Static Security Scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4   # FIX: v3 → v4
+
+      - name: tfsec — Terraform Security Scan
+        uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: terraform/
+
+      - name: Trivy — Docker Image Security Scan
+        uses: aquasecurity/trivy-action@0.20.0   # FIX: pin version, never use @master
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          format: table
+          exit-code: 1          # FIX: fail the job on CRITICAL/HIGH (was 0 = silent)
+          severity: CRITICAL,HIGH
+
+  deploy:
+    name: Apply Sealed Secrets + Deploy to K8s
+    needs: security-scans
+    runs-on: ubuntu-latest
+    # FIX: only deploy on pushes to main, not on PRs
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4   # FIX: v3 → v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4   # FIX: v3 → v4
+        with:
+          version: v1.28.0
+
+      - name: Set up kubeconfig and Minikube certs
+        run: |
+          mkdir -p $HOME/.kube
+          # Kubeconfig comes from GitHub Secrets (base64-encoded)
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config   # FIX: restrict permissions
+
+          mkdir -p $HOME/.minikube/profiles/minikube
+          echo "${{ secrets.MINIKUBE_CLIENT_CRT }}" | base64 --decode > $HOME/.minikube/profiles/minikube/client.crt
+          echo "${{ secrets.MINIKUBE_CLIENT_KEY }}" | base64 --decode > $HOME/.minikube/profiles/minikube/client.key
+          chmod 600 $HOME/.minikube/profiles/minikube/client.key   # FIX: restrict private key
+
+          mkdir -p $HOME/.minikube
+          echo "${{ secrets.MINIKUBE_CA_CRT }}" | base64 --decode > $HOME/.minikube/ca.crt
+
+      - name: Restore sealed-secrets controller cert
+        run: |
+          echo "${{ secrets.SEALED_CERT }}" | base64 --decode > /tmp/mycert.pem   # FIX: write to /tmp, not workspace root
+
+      - name: Install kubeseal
+        run: |
+          wget -q https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.25.0/kubeseal-0.25.0-linux-amd64.tar.gz
+          tar -xzf kubeseal-0.25.0-linux-amd64.tar.gz
+          sudo install kubeseal /usr/local/bin/kubeseal
+          rm kubeseal-0.25.0-linux-amd64.tar.gz   # FIX: clean up archive
+
+      - name: Generate SealedSecret from GitHub Secret
+        run: |
+          # FIX: write the plain Secret to /tmp, never to the workspace (avoids accidental commit)
+          cat > /tmp/secret.yaml <<YAML
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: mysecret
+            namespace: default
+          type: Opaque
+          stringData:
+            password: '${{ secrets.SECRET_PASSWORD }}'
+          YAML
+
+          mkdir -p sealed-secrets
+          kubeseal --cert /tmp/mycert.pem --format yaml < /tmp/secret.yaml > sealed-secrets/sealedsecret.yaml
+
+      - name: Apply SealedSecret
+        run: kubectl apply -f sealed-secrets/sealedsecret.yaml
+
+      - name: Apply K8s Deployment
+        run: kubectl apply -f k8s/deployment.yaml
+
+      - name: Verify rollout
+        run: |   # FIX: actually wait for the rollout to succeed
+          kubectl rollout status deployment/nginx-deployment --timeout=120s

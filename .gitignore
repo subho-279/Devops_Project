@@ -1,0 +1,25 @@
+# Terraform
+terraform.tfvars
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+
+# Secrets & keys — NEVER commit these
+*.pem
+*.key
+*.p12
+*.pfx
+kubeconfig
+kubeconfig.b64
+*.b64
+.env
+.env.*
+secrets/
+secret.yaml
+
+# Temp / local
+temp-clean/
+__pycache__/
+*.pyc
+.DS_Store
